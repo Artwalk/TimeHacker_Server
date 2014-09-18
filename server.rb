@@ -1,32 +1,22 @@
 require 'sinatra'
+require 'sinatra/json'
 require 'json'
-require 'fileutils'
-#require 'time'
+require 'pg'
 
-get '/' do 
-	content_type :json
-  dict = readData
-  return dict
+conn = PGconn.open(:dbname => 'TimeHackerDB')
+
+get '/' do
+  res = conn.query('SELECT * FROM user_data')
+
+  allFeedbacks = {}
+  for r in res
+    allFeedbacks[r['time']] = JSON.parse(r['data'])
+  end
+
+  json allFeedbacks
 end
 
 post '/feedback' do
 	data = params[:data]
-	saveData("{\"%s\" : %s}," % [Time.now, data])
-end
-
-$fName = "post.txt"
-
-
-# r w file
-def saveData(data)
-	# coding: utf-8
-	f = File.open($fName, "a")
-	f.puts data
-	f.close
-end
-
-def readData
-	File.open($fName, "r") do |f|
-		s = "[ %s ]" % f.read().slice!(0..-3)
-	end
+  conn.exec('INSERT INTO user_data(time, data) VALUES(now(), \'%s\')' % data)
 end
