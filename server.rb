@@ -3,7 +3,9 @@ require 'sinatra/json'
 require 'json'
 require 'pg'
 
-conn = PGconn.open(:dbname => 'TimeHackerDB')
+set :port, 8001
+
+conn = PGconn.open(:dbname => 'timehackerdb')
 
 get '/' do
   res = conn.query('SELECT * FROM user_data')
