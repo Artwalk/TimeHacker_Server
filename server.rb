@@ -7,15 +7,15 @@ set :port, 8001
 
 conn = PGconn.open(:dbname => 'timehackerdb')
 
-get '/' do
+get '/feedbacks' do
   res = conn.query('SELECT * FROM user_data')
 
-  allFeedbacks = {}
+  feedbacks = {}
   for r in res
-    allFeedbacks[r['time']] = JSON.parse(r['data'])
+    feedbacks[r['time']] = JSON.parse(r['data'])
   end
 
-  json allFeedbacks
+  json feedbacks
 end
 
 post '/feedback' do
