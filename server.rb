@@ -20,5 +20,9 @@ end
 
 post '/feedback' do
 	data = params[:data]
-  conn.exec('INSERT INTO user_data(time, data) VALUES(now(), \'%s\')' % data)
+
+	if data==nil
+		data = JSON.generate(params)
+	end
+	conn.exec('INSERT INTO user_data(time, data) VALUES(now(), \'%s\')' % data)
 end
