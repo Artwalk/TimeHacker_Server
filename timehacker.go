@@ -1,69 +1,60 @@
 package main
 
-import(
-  "net/http"
-   "github.com/codegangsta/martini"
-   "github.com/codegangsta/martini-contrib/binding"
-   "strings"
-   _ "github.com/lib/pq"
-  "database/sql"
-  "log"
-  "time"
-  "github.com/bitly/go-simplejson"
+import (
+	"database/sql"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/codegangsta/martini"
+	"github.com/codegangsta/martini-contrib/binding"
+	_ "github.com/lib/pq"
 )
 
 type Post struct {
-    Data   string    `form:"data" binding:"required"`
-}
-
-type OnePost struct {
-  Timestmp time.Time
-  Data string
+	Data string `form:"data" binding:"required"`
 }
 
 func printErr(err error) {
-  if err != nil {
-    log.Fatal(err)
-  }
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
-  m := martini.Classic()
-  p := []Post{}
+	m := martini.Classic()
 
-  db, err := sql.Open("postgres", "user=art dbname=timehackerdb sslmode=disable")
-  printErr(err)
+	db, err := sql.Open("postgres", "user=art dbname=timehackerdb sslmode=disable")
+	printErr(err)
+	defer db.Close()
 
-  m.Get("/feedbacks", func() string {
-    s := "["
+	m.Get("/feedbacks", func() string {
+		s := "{"
 
-rows, err := db.Query("SELECT * FROM user_data")
-printErr(err)
+		rows, err := db.Query("SELECT * FROM user_data")
+		printErr(err)
 
-for rows.Next() {
-    var mytime time.Time
-    var data string
-    err := rows.Scan(&mytime, &data)
-    printErr(err)
+		for rows.Next() {
+			var mytime time.Time
+			var data string
+			err := rows.Scan(&mytime, &data)
+			printErr(err)
 
-    _ := [mytime:Timestmp, data:Data]
+			s = s + "\"" + mytime.Format("2006-01-02 15:04:05") + "\":" + data + ","
+		}
 
-println(mytime.Format("Mon Jan 2 15:04:05 -0700 MST 2006"))
-    s = s + data + ","
-  }
+		s = strings.TrimRight(s, ",")
+		return s + "}"
+	})
 
-    s = strings.TrimRight(s, ",")
-    s += "]"
-    return s
-  })
+	m.Post("/feedback", binding.Bind(Post{}), func(post Post) string {
+		_, err := db.Exec("INSERT INTO user_data(time, data) VALUES(now(), $1)", post.Data)
+		printErr(err)
 
-  m.Post("/feedback", binding.Bind(Post{}), func(post Post) string {
-        // This function won't execute if there were errors
-		p = append(p, post)
-    return "OK"
-    })
+		return "ok"
+	})
 
-  http.ListenAndServe("127.0.0.1:8001", m)
-  m.Run()
-
+	http.ListenAndServe("127.0.0.1:8001", m)
+	m.Run()
 }
